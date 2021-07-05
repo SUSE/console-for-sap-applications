@@ -1,6 +1,9 @@
 package discovery
 
 import (
+	"fmt"
+
+	"github.com/pkg/errors"
 	"github.com/trento-project/trento/internal/consul"
 	"github.com/trento-project/trento/internal/environments"
 	"github.com/trento-project/trento/internal/hosts"
@@ -26,28 +29,39 @@ func (d SAPSystemsDiscovery) GetId() string {
 	return d.id
 }
 
-func (d SAPSystemsDiscovery) Discover() error {
+func (d SAPSystemsDiscovery) Discover() (string, error) {
+	var sids, plural string
 	systems, err := sapsystem.NewSAPSystemsList()
 
 	if err != nil {
-		return err
+		return fmt.Errorf("%v", err).Error(), err
 	}
 
 	d.SAPSystems = systems
 	for _, s := range d.SAPSystems {
+		if sids != "" {
+			sids += ", "
+			plural = "s"
+		}
+		sids += s.SID
+
 		err := s.Store(d.discovery.client)
 		if err != nil {
-			return err
+			return fmt.Errorf("%v", err).Error(), err
 		}
 
 		// Store SAP System, Landscape and Environment names on hosts metadata
 		err = storeSAPSystemTags(d.discovery.client, s)
 		if err != nil {
-			return err
+			return fmt.Errorf("%v", err).Error(), err
 		}
 	}
 
-	return nil
+	if sids != "" {
+		return fmt.Sprintf("Cluster%s with name%s: %s successfully discovered", plural, plural, sids), nil
+	}
+	output := "No clusters were found, pelase run the trento agent with root privileges"
+	return output, errors.New(output)
 }
 
 func storeSAPSystemTags(client consul.Client, system *sapsystem.SAPSystem) error {
