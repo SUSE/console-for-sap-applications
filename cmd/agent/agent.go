@@ -17,6 +17,9 @@ import (
 var TTL time.Duration
 var port int
 var consulConfigDir string
+var UseEmbeddedConsul bool
+var consulSrv string
+var consulBindAddr string
 
 func NewAgentCmd() *cobra.Command {
 
@@ -41,6 +44,9 @@ func NewAgentCmd() *cobra.Command {
 	startCmd.Flags().DurationVar(&TTL, "ttl", time.Second*10, "Duration of Consul TTL checks")
 	startCmd.Flags().IntVarP(&port, "port", "p", 8700, "The TCP port to use for the web service")
 	startCmd.Flags().StringVarP(&consulConfigDir, "consul-config-dir", "", "consul.d", "Consul configuration directory used to store node meta-data")
+	startCmd.Flags().BoolVar(&UseEmbeddedConsul, "use-embedded-consul", true, "Enable the usage of the trento embedded consul client")
+	startCmd.Flags().StringVar(&consulSrv, "consul-server", "", "Consul server hostname or IP that the embedded client should connect to")
+	startCmd.Flags().StringVar(&consulBindAddr, "consul-bind-addr", "0.0.0.0", "IP address that the embedded consul client should bind to")
 
 	agentCmd.AddCommand(startCmd)
 	agentCmd.AddCommand(runOnceCmd)
@@ -79,6 +85,9 @@ func start(cmd *cobra.Command, args []string) {
 	cfg.WebPort = port
 	cfg.CheckerTTL = TTL
 	cfg.ConsulConfigDir = consulConfigDir
+	cfg.UseEmbeddedConsul = UseEmbeddedConsul
+	cfg.ConsulBindAddr = consulBindAddr
+	cfg.ConsulSrvAddr = consulSrv
 
 	a, err := agent.NewWithConfig(cfg)
 	if err != nil {
